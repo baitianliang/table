@@ -1,11 +1,10 @@
 <template>
-    <div class="blog">
+    <div class="user-list">
         <div class="search">
-            <el-form v-model="searchForm">
+            <el-form label-position="left" inline v-model="searchForm">
                 <el-form-item label="姓名">
                     <el-input clearable v-model="searchForm.name"></el-input>
                 </el-form-item>
-                <!-- <el-input v-model="searchForm.birthday"></el-input> -->
                 <el-form-item label="出生日期">
                     <el-date-picker
                         v-model="searchForm.birthday"
@@ -17,36 +16,35 @@
                 <el-form-item label="住址">
                     <el-input clearable v-model="searchForm.address"></el-input>
                 </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="search">查询</el-button>
+                    <el-button @click="reset">重置</el-button>
+                </el-form-item>
             </el-form>
-            <div class="button">
-                <el-button type="primary" @click="search">查询</el-button>
-                <el-button @click="reset">重置</el-button>
+            <div>
                 <el-button type="primary" @click="augment">新增</el-button>
             </div>
         </div>
         <div class="table">
             <el-table
                 :data="tableData"
-                border
-                style="width: 1830px">
+                border>
                 <el-table-column
                     v-for="(el, index) in tableHead"
                     :key="index"
                     :prop="el.prop"
                     align="center"
-                    header-align="left"
-                    :label="el.name"
-                    width="550">
+                    header-align="center"
+                    :label="el.name">
                 </el-table-column>
                 <el-table-column
                     fixed="right"
                     align="center"
-                    header-align="left"
+                    header-align="center"
                     label="操作"
-                    width="179">
+                    width="180">
                     <template slot-scope="scope">
                         <el-button size="mini" type="warning" round @click="compile(scope.row)">编辑</el-button>
-                        <span>|</span>
                         <el-button size="mini" type="danger" round @click="deleteData(scope.row)">删除</el-button>
                     </template>
                 </el-table-column>
@@ -66,10 +64,14 @@
         <el-drawer
             title="新增表单"
             :visible.sync="dialog"
+            v-if="dialog"
             :before-close="beforeClose">
-            <el-form :model="form">
-                <el-form-item label="姓名">
+            <el-form ref="form" :model="form" :rules="rules">
+                <el-form-item label="姓名" prop="name">
                     <el-input clearable v-model="form.name"></el-input>
+                </el-form-item>
+                <el-form-item label="用户名" prop="userCode">
+                    <el-input clearable v-model="form.userCode"></el-input>
                 </el-form-item>
                 <el-form-item label="出生日期">
                     <el-date-picker
@@ -91,10 +93,14 @@
         <el-drawer
             title="修改表单"
             :visible.sync="dialog2"
+            v-if="dialog2"
             :before-close="beforeClose">
-            <el-form :model="form">
-                <el-form-item label="姓名">
+            <el-form ref="form" :model="form" :rules="rules">
+                <el-form-item label="姓名" prop="name">
                     <el-input clearable v-model="form.name"></el-input>
+                </el-form-item>
+                <el-form-item label="用户名" prop="userCode">
+                    <el-input clearable v-model="form.userCode"></el-input>
                 </el-form-item>
                 <el-form-item label="出生日期">
                     <el-date-picker
@@ -113,12 +119,11 @@
                 <el-button type="primary" @click="modify">保存</el-button>
             </div>
         </el-drawer>
-        <!-- <el-button type="primary" @click="getValue">获取数据</el-button>
-        <el-button type="primary" @click="setValue">添加数据</el-button> -->
     </div>
 </template>
 
 <script>
+import axios from '@/assets/axios/User.js'
 export default {
     name: 'blog',
     data() {
@@ -130,15 +135,27 @@ export default {
                 address: ''
             },
             // 新建表单
-            form: {
-                name: '',
-                birthday: '',
-                address: ''
+            form: {},
+            rules: {
+                name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+                userCode: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
             },
             // 表格数据
             tableData: [],
             // 表头
-            tableHead: [],
+            tableHead: [{
+                name: '姓名',
+                prop: 'name'
+            }, {
+                name: '用户名',
+                prop: 'userCode'
+            }, {
+                name: '生日',
+                prop: 'birthday'
+            }, {
+                name: '家庭住址',
+                prop: 'address'
+            }],
             // 分页信息
             pageInfo: {
                 currentPage: 1,
@@ -153,17 +170,21 @@ export default {
         }
     },
     mounted() {
-        this.$http.get('/api/getTableHead')
-        .then(res => {
-            this.tableHead = res.data
-        })
+        // axios.getUserTableHead()
+        // .then(res => {
+        //     this.tableHead = res.data
+        // })
         this.getTableData()
     },
     methods: {
         // 查询方法
         getTableData() {
             let {searchForm, pageInfo} = this
-            this.$http.post(`api/getTableData/${this.pageInfo.currentPage}/${this.pageInfo.pageSize}`, searchForm)
+            axios.getUserTableData({
+                page: pageInfo.currentPage,
+                size: pageInfo.pageSize,
+                ...searchForm
+            })
             .then(res => {
                 this.tableData = res.data.tableData
                 this.total = res.data.count
@@ -198,7 +219,7 @@ export default {
             })
             .then(() => {
                 let id = row.id
-                this.$http.delete(`api/delete/${id}`)
+                axios.deleteUserInfo(id)
                 .then(() => {
                     this.$message({
                         message: '删除成功',
@@ -222,42 +243,40 @@ export default {
         },
         // 修改按钮
         modify() {
-            let {id} = this.form 
-            Reflect.deleteProperty(this.form, "id")
-            this.$http.post(`api/setValue/${id}`, this.form)
-            .then(() => {
-                this.$message({
-                    message: '修改成功',
-                    type: 'success'
-                });
-                this.beforeClose()
-                this.getTableData()
-            })
-            .catch(res => {
-                this.$message({
-                    message: res,
-                    type: 'warning'
-                });
+            this.$refs['form'].validate((valid) => {
+                if (valid) {
+                    axios.updateUserInfo(this.form)
+                    .then(() => {
+                        this.$message({
+                            message: '修改成功',
+                            type: 'success'
+                        });
+                        this.beforeClose()
+                        this.getTableData()
+                    })
+                }
             })
         },
         // 关闭弹窗回调方法
         beforeClose(done) {
-            for (let val in this.form) {
-                this.form[val] = ''
-            }
+            this.form = {}
             if (typeof done === 'function') done()
             else this.dialog = this.dialog2 = false
         },
         // 确认新增
         add() {
-            this.$http.post('api/addData', this.form)
-            .then(res => {
-                this.$message({
-                    message: '添加成功',
-                    type: 'success'
-                });
-                this.dialog = false
-                this.getTableData()
+            this.$refs['form'].validate((valid) => {
+                if (valid) {
+                    axios.addUserInfo(this.form)
+                    .then(res => {
+                        this.$message({
+                            message: '添加成功',
+                            type: 'success'
+                        });
+                        this.dialog = false
+                        this.getTableData()
+                    })
+                }
             })
         },
         // 改变每页显示条数
@@ -271,23 +290,6 @@ export default {
             this.pageInfo.currentPage = val
             this.getTableData()
         },
-        // getValue() {
-        //     this.$http.get('/api/getValue', {
-        //         params: {id: 1}
-        //     })
-        //     .then(res => {
-        //         console.log(res,'res')
-        //         this.inpContent = res.data[0].name;
-        //     })
-        // },
-        // setValue() {
-        //     this.$http.post('/api/setValue', {
-        //         id: 1, name: this.inpContent
-        //     })
-        //     .then(res => {
-        //         console.log(res,'res')
-        //     })
-        // }
     }
 }
 </script>
@@ -297,49 +299,17 @@ export default {
 .search{
     display: flex;
     justify-content: space-between;
+    // margin: 30px 20px;
     .el-form{
-        display: flex;
-        margin-top: 30px;
-        margin-left: 20px;
         .el-form-item{
-            margin-left: 20px;
-            display: flex;
             .el-input{
                 width: 200px;
             }
         }
     }
-    .button{
-        margin-right: 30px;
-        .el-button {
-            margin-top: 30px;
-            :last-child {
-                margin-left: 0px;
-            }
-        }
-        // :last-of-type {
-        //     margin-left: 50px;
-        // }
-        :last-child {
-            margin-left: 700px;
-        }
-    }
 }
 .table {
-    margin: 30px;
-    height: 700px;
-    .el-table{
-        width: 100%;
-        .el-table__header-wrapper{
-            width: 100%;
-        }
-        .el-table__body-wrapper{
-            width: 100%;
-            .el-table__body{
-                width: 100%;
-            }
-        }
-    }
+    margin: 20px 0px;
 }
 .pagination {
     display: flex;

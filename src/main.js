@@ -3,9 +3,10 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
-import axios from 'axios'
 import ElementUI from 'element-ui'
+Vue.use(ElementUI)
 import 'element-ui/lib/theme-chalk/index.css'
+import './utils/flexible'
 // 组件扫描文件
 import scanFile from "./scanFile"
 Vue.use(scanFile)
@@ -13,10 +14,7 @@ Vue.use(scanFile)
 import store from "./store.js"
 
 
-axios.defaults.baseURL = "http://localhost:8080/"
 Vue.config.productionTip = false
-Vue.use(ElementUI)
-Vue.prototype.$http = axios
 
 /* eslint-disable no-new */
 new Vue({
